@@ -1,0 +1,7 @@
+--------------------------------
+Number of values:       1,101
+Minimum value:           -102
+Average value:            438.66
+Maximum value:            998                             
+Total:                482,964
+--------------------------------
