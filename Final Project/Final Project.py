@@ -1,0 +1,359 @@
+
+# Final Project of CS1: Intro to Game Programming F20 Fall 2020
+
+# Name: Daeshaun Morrison
+
+# Import pygame library
+import pygame
+from random import randint
+
+# Init it for use
+pygame.init()
+
+# Set constants 
+WIDTH=640
+HEIGHT=480
+SHIPSPEED = 10
+ENEMYSPEED = 10
+ENEMYAMOUNT = 5
+defaultFont = "NerkoOne-Regular.ttf"
+BOMB_SpeedY = 25
+# Some basic colors
+BLACK     = (0,0,0)
+RED       = (255,0,0)
+GREEN     = (0,255,0)
+BLUE      = (0,0,255)
+YELLOW    = (255,255,0)
+MAGENTA   = (255,0,255)
+CYAN      = (0,255,255)
+WHITE     = (255,255,255)
+
+
+# Set window size and caption
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Space Defender - Daeshaun Morrison")
+
+class Player(pygame.sprite.Sprite):
+    # Initialize the sprite.
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        # Load img in folder
+        self.image = pygame.image.load("spaceship.png")
+        self.image = self.image.convert()
+        self.image = pygame.transform.scale( self.image, (50, 50))
+        self.image.set_colorkey( self.image.get_at( (1,1) ) )
+        self.rect = self.image.get_rect() 
+        self.rect.center = (300, 400)
+    
+    def update(self):
+        # Allow the user to move using the arrow keys.
+        # pygame.key.get_pressed() returns a
+        # list of booleans, one for each key.
+        # More than one key can be pressed.
+        keys = pygame.key.get_pressed()     
+        if keys[pygame.K_RIGHT] and self.rect.right < WIDTH:            
+            self.rect.centerx += SHIPSPEED         
+        if keys[pygame.K_LEFT] and self.rect.left > 0:         
+            self.rect.centerx -= SHIPSPEED      
+        if keys[pygame.K_UP] and self.rect.top > 0:             
+            self.rect.centery -= SHIPSPEED      
+        if keys[pygame.K_DOWN] and self.rect.bottom < HEIGHT:
+            self.rect.centery += SHIPSPEED
+
+    def get_pos(self):
+        return self.rect.center
+
+
+class Enemy(pygame.sprite.Sprite):
+    def __init__(self, position, speed):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.image.load("enemy-spaceship-sprite.png")
+        self.image = self.image.convert()
+        self.image = pygame.transform.scale( self.image, (50, 50))
+        self.image.set_colorkey( self.image.get_at( (1,1) ) )
+        self.rect = self.image.get_rect() 
+        self.rect.center = position
+        (self.speedX, self.speedY) = speed
+
+    def update(self):
+        self.rect.center = (self.rect.centerx + self.speedX, self.rect.centery + self.speedY)
+
+        if self.rect.left < 0:
+            self.speedX = abs(self.speedX)
+        if self.rect.right > WIDTH :
+            self.speedX = -1 * abs(self.speedX)
+        if self.rect.top < 0:
+            self.speedY = abs(self.speedY)
+        if self.rect.top > HEIGHT:
+            self.rect.bottom = 0
+
+class Missile(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        # Get image of the whole spritesheet
+        self.imgMaster = pygame.image.load("Royalty-Free-Game-art-Spaceships-from-Unlucky-Studio.png")
+        self.imgMaster.convert()
+        misImgSize = (45, 77)
+        # Create a surface to draw a section of the spritesheet
+        self.image = pygame.Surface(misImgSize)
+        self.image.blit(self.imgMaster, (0,0), ( (71, 1956) ,(misImgSize)) )
+        self.image.set_colorkey( self.image.get_at((1,1)))
+        self.image = pygame.transform.scale( self.image, (15, 35) )
+        # Get rect of sprite
+        self.rect = self.image.get_rect()
+        self.rect.center = (200, 220)
+        self.shooting = False
+        self.dy = 0
+
+    def fire(self, player_pos):
+        if not self.shooting:
+            self.rect.center = player_pos  # Move Bomb to cannon.
+            # self.rect.centery -= 33        # Adjust bomb position to
+            # self.rect.centerx += 90        #   the cannon's muzzle
+            self.dy = BOMB_SpeedY              # Set its velocity.
+            self.shooting = True           # The Bomb is in flight
+    
+    def update(self):
+        self.rect.centery -= self.dy
+    
+    def reset(self):
+        self.rect.center = (-100, -100)    # This location is off-screen!
+        self.dx = 0
+        self.shooting = False
+    
+
+
+class Label(pygame.sprite.Sprite):
+    def __init__(self, textStr, center, fontName, fontSize, textColor):
+        pygame.sprite.Sprite.__init__(self)
+        self.text = textStr
+        self.center = center
+        self.font = pygame.font.Font(fontName, fontSize)
+        self.textColor = textColor
+    # self.update() - Render the text on the label and any changes to it.
+    def update(self):
+        self.image = self.font.render(self.text, 1, self.textColor)
+        self.rect = self.image.get_rect()
+        self.rect.center = self.center
+
+
+def titleScreen():
+    # Construct a background
+    background = pygame.Surface(screen.get_size())
+    # Convert for better preformance
+    background = background.convert()
+    # Set background color
+    background.fill( (0, 0, 0) )
+    screen.blit(background, (0, 0))
+    # Ask professor about this - screen.fill((0, 0, 0))
+
+    # Construct labels for title, objective and controls. 
+    # It stays until user proceeds or quits game.
+    # Adding them to a group is one step needs to update any changes made to them and collision detection
+    title = Label("Space Defenders!", ( (WIDTH//2), (HEIGHT//2) ), defaultFont, 25, WHITE)
+    goal = Label("Fight off alien ships as long as possible to gain the highest score!", ( (WIDTH//2), ((HEIGHT//2) + 30) ), defaultFont, 23, WHITE)
+    instr = Label("Move using arrow keys and use spacebar to shoot", ( (WIDTH//2), (HEIGHT//2) + 60), defaultFont, 25, WHITE)
+    startGametxt = Label("Click to start!", ( (WIDTH//2), (HEIGHT//2) + 90), defaultFont, 25, WHITE)
+    labelGroup = pygame.sprite.Group(title, goal, instr, startGametxt, )
+    
+    # Set FPS of the game
+    clock = pygame.time.Clock()
+    # Set a loop that keeps running until user quits or proceeds
+    keepGoing = True
+    while keepGoing:
+        # Set FPS of the game - 30 frames per second/tick
+        clock.tick(30)
+        # Handle any events
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                keepGoing = False
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                keepGoing = False
+        # Update the display
+        labelGroup.clear(screen, background)
+
+        labelGroup.update()
+
+        labelGroup.draw(screen)
+
+        pygame.display.flip()
+            
+def game():
+    # Construct a background
+    background = pygame.Surface(screen.get_size())
+    # Convert for better preformance
+    background = background.convert()
+    # Set background color
+    background.fill( (0, 0, 0) )
+    screen.blit(background, (0, 0))
+
+    # Create a necessary objects
+    player = Player()
+    missile = Missile()
+    enemyList = []
+
+    for i in range(ENEMYAMOUNT):
+        positionX = randint( 0, WIDTH)
+        positionY = randint( 0, (HEIGHT//2) )
+        speedX = randint(-ENEMYSPEED, ENEMYSPEED)
+        speedY = randint(-ENEMYSPEED, ENEMYSPEED)
+        eachEnemy = Enemy((positionX, positionY), (speedX, speedY))
+        enemyList.append(eachEnemy)
+    # Add them to groups
+    playerGroup = pygame.sprite.Group(player, missile)
+    enemyGroup = pygame.sprite.Group(enemyList)
+
+
+    ## Set necessary vars ##
+    shooting = False 
+    # - a variable that tells if the user won
+    win = False
+    # - Set FPS of the game
+    clock = pygame.time.Clock()
+    #  - Set a loop that keeps running until user quits or proceeds
+    keepGoing = True
+    while keepGoing:
+        # Set FPS of the game - 30 frames per second/tick
+        clock.tick(30)
+        # Handle any events
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                keepGoing = False 
+                print("hi!")
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_w:
+                    keepGoing = False
+                    win = True
+                    print("Win")
+                if event.key == pygame.K_l:
+                    keepGoing = False
+                    win = False
+                    print("Lose")
+                if event.key == pygame.K_SPACE:
+                    if shooting == False:
+                        missile.fire(player.get_pos())
+                        print(player.get_pos())
+
+        #### Check collisions or any other actions
+        # if missile.top < 0:
+        #     missile.reset()
+
+
+        
+        playerGroup.clear(screen, background)
+        enemyGroup.clear(screen, background)
+
+        playerGroup.update()
+        enemyGroup.update()
+
+        playerGroup.draw(screen)
+        enemyGroup.draw(screen)
+
+        pygame.display.flip()
+    
+    return win
+
+def playAgain(winLose):
+    # Construct a background
+    background = pygame.Surface(screen.get_size())
+    # Convert for better preformance
+    background = background.convert()
+    # Set background color
+    background.fill( (0, 0, 0) )
+    screen.blit(background, (0, 0))
+
+    # Get from variable "game()" and check if it's true or false.
+    # winLose = True, user won.  winLose = False, user lost.
+    winOrLose = winLose
+
+    if winOrLose == True :
+        gameResult = Label("You Won!", ( (WIDTH//2), (HEIGHT//2)), defaultFont, 25, BLUE)
+        playAgainTxt = Label("Play again(Y/N)", ( (WIDTH//2), (HEIGHT//2) + 30), defaultFont, 25, BLUE)
+    else: 
+        gameResult = Label("You Lost!", ( (WIDTH//2), (HEIGHT//2)), defaultFont, 25, RED)
+        playAgainTxt= Label("Play again(Y/N)", ( (WIDTH//2), (HEIGHT//2) + 30), defaultFont, 25, RED)
+    
+    labelGroup = pygame.sprite.Group(gameResult, playAgainTxt)
+
+    replay = False
+    # Set FPS of the game
+    clock = pygame.time.Clock()
+    # Set a loop that keeps running until user quits or proceeds
+    keepGoing = True
+    while keepGoing:
+        # Set FPS of the game - 30 frames per second/tick
+        clock.tick(30)
+        # Handle any events
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                keepGoing = False 
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_y:
+                    keepGoing = False
+                    replay = True
+                    print("Yes")
+                if event.key == pygame.K_n:
+                    keepGoing = False
+                    replay = False
+                    print("No")
+
+        labelGroup.clear(screen, background)
+
+        labelGroup.update()
+
+        labelGroup.draw(screen)
+
+        pygame.display.flip()
+
+    return replay
+
+def endCredits():
+    # Construct a background
+    background = pygame.Surface(screen.get_size())
+    # Convert for better preformance
+    background = background.convert()
+    # Set background color
+    background.fill( (0, 0, 0) )
+    screen.blit(background, (0, 0))
+
+    endCreditsTxt1 = Label("I hope you enjoyed playing!", ( (WIDTH//2), (HEIGHT//2)), defaultFont, 25, WHITE)
+    endCreditsTxt2 = Label("By Daeshaun Morrison", ( (WIDTH//2), (HEIGHT//2) + 30), defaultFont, 25, WHITE)
+
+    labelGroup = pygame.sprite.Group(endCreditsTxt1, endCreditsTxt2)
+
+
+    # Set FPS of the game
+    clock = pygame.time.Clock()
+    # Set a loop that runs for a set amount of secounds, 5 in this case.
+    keepGoing = True
+    frames = 0
+
+    while keepGoing == True:
+        clock.tick(30)
+
+        frames = frames + 1
+        if frames == 150:
+            keepGoing = False
+
+        labelGroup.clear(screen, background)
+
+        labelGroup.update()
+
+        labelGroup.draw(screen)
+
+        pygame.display.flip()
+
+
+def main():
+    #####
+    titleScreen()
+    
+    replay = True
+    while replay == True:
+      result = game()
+      replay = playAgain(result)
+ 
+    endCredits()
+
+main()
+pygame.quit()
