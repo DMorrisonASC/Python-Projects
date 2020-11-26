@@ -104,25 +104,21 @@ class Missile(pygame.sprite.Sprite):
         # Get rect of sprite
         self.rect = self.image.get_rect()
         # Place missile off-screen at first
-        self.rect.center = (-100, -100)
-        self.shooting = False
+        self.rect.center = (-100, 100)
         self.dy = 0
 
+
     def fire(self, player_pos):
-        if not self.shooting:
             self.rect.center = player_pos  # Move Bomb to cannon.
-            # self.rect.centery -= 33        # Adjust bomb position to
-            # self.rect.centerx += 90        #   the cannon's muzzle
             self.dy = BOMB_SpeedY              # Set its velocity.
-            self.shooting = True           # The Bomb is in flight
+
     
     def update(self):
         self.rect.centery -= self.dy
     
     def reset(self):
-        self.rect.center = (-100, -100)     # This location is off-screen!
-        self.dx = 0
-        self.shooting = False
+        self.kill()
+        print("Killed!")
     
 
 
@@ -192,7 +188,7 @@ def game():
 
     # Create a necessary objects
     player = Player()
-    missileList = []
+    # missileList = []
     # missile = Missile()
     enemyList = []
     tickCount = 0
@@ -208,17 +204,17 @@ def game():
         eachEnemy = Enemy((positionX, positionY), (speedX, speedY))
         enemyList.append(eachEnemy)
 
-    for i in range(1):
-        missile = Missile()
-        missileList.append(missile)
+    
+
     # Add them to groups
-    playerGroup = pygame.sprite.Group(player, missileList)
+    playerGroup = pygame.sprite.Group(player)
+    missileGroup = pygame.sprite.Group()
     enemyGroup = pygame.sprite.Group(enemyList)
     labelGroup = pygame.sprite.Group(highScoreLabel)
 
 
     ## Set necessary vars ##
-    shooting = False
+
     # - a variable that tells if the user won
     win = False
     # - Set FPS of the game
@@ -237,32 +233,28 @@ def game():
                 keepGoing = False 
                 print("hi!")
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_w:
-                    keepGoing = False
-                    win = True
-                    print("Win")
-                if event.key == pygame.K_l:
-                    keepGoing = False
-                    win = False
-                    print("Lose")
-
                 if event.key == pygame.K_SPACE:
-                    if shooting == False:   
-                        missileList.append(Missile())
-                        missile.fire(player.get_pos())
-                        shooting = True
-                        # print(player.get_pos())
+                    missile = Missile()
+                    missileGroup.add(missile)
+                    missile.fire(player.get_pos())
+
+
 
         #### Check collisions or any other actions
-        if missile.rect.bottom < 0:
-            shooting = False
-            missile.reset()
+        # if missile.rect.bottom < 0:
+        #     missile.reset()
 
-        if pygame.sprite.spritecollide(missile, enemyGroup, True) :
-            highScore += 25 
-            highScoreLabel.text = f"Highscore: {highScore}"
-            missile.reset()
-        
+        # if pygame.sprite.spritecollide(missile, enemyGroup, True) :
+        #     highScore += 25 
+        #     highScoreLabel.text = f"Highscore: {highScore}"
+        #     missile.reset()
+
+        for missile in missileGroup:
+            if pygame.sprite.spritecollide(missile, enemyGroup, True) :
+                highScore += 25 
+                highScoreLabel.text = f"Highscore: {highScore}"
+                missile.reset()                
+
         if pygame.sprite.spritecollide(player, enemyGroup, True) :
             keepGoing = False
         
@@ -277,14 +269,17 @@ def game():
         playerGroup.clear(screen, background)
         enemyGroup.clear(screen, background)
         labelGroup.clear(screen, background)
+        missileGroup.clear(screen, background)
 
         playerGroup.update()
         enemyGroup.update()
         labelGroup.update()
+        missileGroup.update()
 
         playerGroup.draw(screen)
         enemyGroup.draw(screen)
         labelGroup.draw(screen)
+        missileGroup.draw(screen)
 
         pygame.display.flip()
     
