@@ -13,11 +13,13 @@ pygame.init()
 # Set constants 
 WIDTH=640
 HEIGHT=480
+CLOCK_TICK = 30
 SHIPSPEED = 10
 ENEMYSPEED = 10
 ENEMYAMOUNT = 5
 defaultFont = "NerkoOne-Regular.ttf"
 BOMB_SpeedY = 25
+BOMB_AMOUNT = 5
 # Some basic colors
 BLACK     = (0,0,0)
 RED       = (255,0,0)
@@ -101,7 +103,8 @@ class Missile(pygame.sprite.Sprite):
         self.image = pygame.transform.scale( self.image, (15, 35) )
         # Get rect of sprite
         self.rect = self.image.get_rect()
-        self.rect.center = (200, 220)
+        # Place missile off-screen at first
+        self.rect.center = (-100, -100)
         self.shooting = False
         self.dy = 0
 
@@ -117,7 +120,7 @@ class Missile(pygame.sprite.Sprite):
         self.rect.centery -= self.dy
     
     def reset(self):
-        self.rect.center = (-100, -100)    # This location is off-screen!
+        self.rect.center = (-100, -100)     # This location is off-screen!
         self.dx = 0
         self.shooting = False
     
@@ -162,7 +165,7 @@ def titleScreen():
     keepGoing = True
     while keepGoing:
         # Set FPS of the game - 30 frames per second/tick
-        clock.tick(30)
+        clock.tick(CLOCK_TICK)
         # Handle any events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -189,8 +192,13 @@ def game():
 
     # Create a necessary objects
     player = Player()
-    missile = Missile()
+    missileList = []
+    # missile = Missile()
     enemyList = []
+    tickCount = 0
+    highScore = 0
+    level = 0
+    highScoreLabel = Label(f"Highscore: {highScore}", (100, 100), defaultFont, 25, WHITE)
 
     for i in range(ENEMYAMOUNT):
         positionX = randint( 0, WIDTH)
@@ -199,13 +207,18 @@ def game():
         speedY = randint(-ENEMYSPEED, ENEMYSPEED)
         eachEnemy = Enemy((positionX, positionY), (speedX, speedY))
         enemyList.append(eachEnemy)
+
+    for i in range(1):
+        missile = Missile()
+        missileList.append(missile)
     # Add them to groups
-    playerGroup = pygame.sprite.Group(player, missile)
+    playerGroup = pygame.sprite.Group(player, missileList)
     enemyGroup = pygame.sprite.Group(enemyList)
+    labelGroup = pygame.sprite.Group(highScoreLabel)
 
 
     ## Set necessary vars ##
-    shooting = False 
+    shooting = False
     # - a variable that tells if the user won
     win = False
     # - Set FPS of the game
@@ -214,7 +227,10 @@ def game():
     keepGoing = True
     while keepGoing:
         # Set FPS of the game - 30 frames per second/tick
-        clock.tick(30)
+        clock.tick(CLOCK_TICK)
+        # Every 30 ticks is a second
+        tickCount += 1
+
         # Handle any events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -229,25 +245,46 @@ def game():
                     keepGoing = False
                     win = False
                     print("Lose")
+
                 if event.key == pygame.K_SPACE:
-                    if shooting == False:
+                    if shooting == False:   
+                        missileList.append(Missile())
                         missile.fire(player.get_pos())
-                        print(player.get_pos())
+                        shooting = True
+                        # print(player.get_pos())
 
         #### Check collisions or any other actions
-        # if missile.top < 0:
-        #     missile.reset()
+        if missile.rect.bottom < 0:
+            shooting = False
+            missile.reset()
 
-
+        if pygame.sprite.spritecollide(missile, enemyGroup, True) :
+            highScore += 25 
+            highScoreLabel.text = f"Highscore: {highScore}"
+            missile.reset()
         
+        if pygame.sprite.spritecollide(player, enemyGroup, True) :
+            keepGoing = False
+        
+        if len(enemyGroup) == 0:
+            level += 1
+            print(level)
+        
+        if level == 10:
+            keepGoing = False
+            win = True
+            
         playerGroup.clear(screen, background)
         enemyGroup.clear(screen, background)
+        labelGroup.clear(screen, background)
 
         playerGroup.update()
         enemyGroup.update()
+        labelGroup.update()
 
         playerGroup.draw(screen)
         enemyGroup.draw(screen)
+        labelGroup.draw(screen)
 
         pygame.display.flip()
     
@@ -282,7 +319,7 @@ def playAgain(winLose):
     keepGoing = True
     while keepGoing:
         # Set FPS of the game - 30 frames per second/tick
-        clock.tick(30)
+        clock.tick(CLOCK_TICK)
         # Handle any events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -329,7 +366,7 @@ def endCredits():
     frames = 0
 
     while keepGoing == True:
-        clock.tick(30)
+        clock.tick(CLOCK_TICK)
 
         frames = frames + 1
         if frames == 150:
