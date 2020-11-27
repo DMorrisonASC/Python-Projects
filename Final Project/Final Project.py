@@ -93,7 +93,6 @@ class Enemy(pygame.sprite.Sprite):
         else :
             self.rect.center = (self.rect.centerx + (self.speedX - self.speedX), self.rect.centery + (self.speedY - self.speedY))
 
-
 class Missile(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
@@ -118,10 +117,12 @@ class Missile(pygame.sprite.Sprite):
 
     def update(self):
         self.rect.centery -= self.dy
+        # Remove sprite when it's off-screen to save memory
+        if self.rect.bottom < 0:
+            self.reset()
     
     def reset(self):
         self.kill()
-        print("Killed!")
     
 class Label(pygame.sprite.Sprite):
     def __init__(self, textStr, center, fontName, fontSize, textColor):
@@ -189,25 +190,19 @@ def game():
 
     # Create a necessary objects
     player = Player()
-    enemyList = []
+    # enemyList = []
     tickCount = 0
     highScore = 0
     level = 0
-    highScoreLabel = Label(f"Highscore: {highScore}", (100, 100), defaultFont, 25, WHITE)
-
-    for i in range(ENEMYAMOUNT):
-        positionX = randint( 0, WIDTH)
-        positionY = randint( 0, (HEIGHT//2) )
-        speedX = randint(-ENEMYSPEED, ENEMYSPEED)
-        speedY = randint(-ENEMYSPEED, ENEMYSPEED)
-        eachEnemy = Enemy((positionX, positionY), (speedX, speedY))
-        enemyList.append(eachEnemy)
+    highScoreLabel = Label(f"Highscore: {highScore}", (100, 50), defaultFont, 25, WHITE)
+    levelLabel = Label(f"Level: {level}", ((WIDTH - 100), 50), defaultFont, 25, WHITE)
 
     # Add them to groups
     playerGroup = pygame.sprite.Group(player)
     missileGroup = pygame.sprite.Group()
-    enemyGroup = pygame.sprite.Group(enemyList)
-    labelGroup = pygame.sprite.Group(highScoreLabel)
+    # enemyGroup = pygame.sprite.Group(enemyList)
+    enemyGroup = pygame.sprite.Group()
+    labelGroup = pygame.sprite.Group(highScoreLabel, levelLabel)
 
     # - a variable that tells if the user won
     win = False
@@ -222,6 +217,22 @@ def game():
         clock.tick(CLOCK_TICK)
         # Every 30 ticks is a second
         tickCount += 1
+
+        # Create New list of enemy for each level
+        enemyList = []
+
+        if len(enemyGroup) == 0:
+            level += 1
+            levelLabel.text = f"Level: {level}"
+            enemyList.clear
+            for i in range(ENEMYAMOUNT):
+                positionX = randint( 0, WIDTH)
+                positionY = randint( 0, (HEIGHT//2) )
+                speedX = randint(-ENEMYSPEED, ENEMYSPEED)
+                speedY = randint(-ENEMYSPEED, ENEMYSPEED)
+                eachEnemy = Enemy((positionX, positionY), (speedX, speedY))
+                enemyList.append(eachEnemy)
+            enemyGroup = pygame.sprite.Group(enemyList) 
 
         # Pause everything in the game. Game is paused if "paused = True", otherwise run.
         if pause == True:
@@ -254,23 +265,10 @@ def game():
             if pygame.sprite.spritecollide(missile, enemyGroup, True) :
                 highScore += 25 
                 highScoreLabel.text = f"Highscore: {highScore}"
-                missile.reset()                
+                missile.reset()
 
         if pygame.sprite.spritecollide(player, enemyGroup, True) :
             keepGoing = False
-        
-        if len(enemyGroup) == 0:
-            level += 1
-            print(level)
-            for i in range(ENEMYAMOUNT):
-                positionX = randint( 0, WIDTH)
-                positionY = randint( 0, (HEIGHT//2) )
-                speedX = randint(-ENEMYSPEED, ENEMYSPEED)
-                speedY = randint(-ENEMYSPEED, ENEMYSPEED)
-                eachEnemy = Enemy((positionX, positionY), (speedX, speedY))
-                enemyList.append(eachEnemy)
-            enemyGroup = pygame.sprite.Group(enemyList)    
-
         
         if level == 10:
             keepGoing = False
