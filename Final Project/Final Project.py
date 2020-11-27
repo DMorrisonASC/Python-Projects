@@ -1,6 +1,4 @@
-
 # Final Project of CS1: Intro to Game Programming F20 Fall 2020
-
 # Name: Daeshaun Morrison
 
 # Import pygame library
@@ -15,7 +13,7 @@ WIDTH=640
 HEIGHT=480
 CLOCK_TICK = 30
 SHIPSPEED = 10
-ENEMYSPEED = 10
+ENEMYSPEED = 5
 ENEMYAMOUNT = 5
 defaultFont = "NerkoOne-Regular.ttf"
 BOMB_SpeedY = 25
@@ -46,6 +44,8 @@ class Player(pygame.sprite.Sprite):
         self.image.set_colorkey( self.image.get_at( (1,1) ) )
         self.rect = self.image.get_rect() 
         self.rect.center = (300, 400)
+        # Allows ship to move
+        self.toggle = True
     
     def update(self):
         # Allow the user to move using the arrow keys.
@@ -53,18 +53,17 @@ class Player(pygame.sprite.Sprite):
         # list of booleans, one for each key.
         # More than one key can be pressed.
         keys = pygame.key.get_pressed()     
-        if keys[pygame.K_RIGHT] and self.rect.right < WIDTH:            
+        if keys[pygame.K_RIGHT] and self.rect.right < WIDTH and self.toggle == True:            
             self.rect.centerx += SHIPSPEED         
-        if keys[pygame.K_LEFT] and self.rect.left > 0:         
+        if keys[pygame.K_LEFT] and self.rect.left > 0 and self.toggle == True:         
             self.rect.centerx -= SHIPSPEED      
-        if keys[pygame.K_UP] and self.rect.top > 0:             
+        if keys[pygame.K_UP] and self.rect.top > 0 and self.toggle == True:             
             self.rect.centery -= SHIPSPEED      
-        if keys[pygame.K_DOWN] and self.rect.bottom < HEIGHT:
+        if keys[pygame.K_DOWN] and self.rect.bottom < HEIGHT and self.toggle == True:
             self.rect.centery += SHIPSPEED
 
     def get_pos(self):
         return self.rect.center
-
 
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, position, speed):
@@ -76,18 +75,24 @@ class Enemy(pygame.sprite.Sprite):
         self.rect = self.image.get_rect() 
         self.rect.center = position
         (self.speedX, self.speedY) = speed
+        # Allows ship to move
+        self.toggle = True
 
     def update(self):
-        self.rect.center = (self.rect.centerx + self.speedX, self.rect.centery + self.speedY)
+        if self.toggle:
+            self.rect.center = (self.rect.centerx + self.speedX, self.rect.centery + self.speedY)
 
-        if self.rect.left < 0:
-            self.speedX = abs(self.speedX)
-        if self.rect.right > WIDTH :
-            self.speedX = -1 * abs(self.speedX)
-        if self.rect.top < 0:
-            self.speedY = abs(self.speedY)
-        if self.rect.top > HEIGHT:
-            self.rect.bottom = 0
+            if self.rect.left < 0:
+                self.speedX = abs(self.speedX)
+            if self.rect.right > WIDTH :
+                self.speedX = -1 * abs(self.speedX)
+            if self.rect.top < 0:
+                self.speedY = abs(self.speedY)
+            if self.rect.top > HEIGHT:
+                self.rect.bottom = 0
+        else :
+            self.rect.center = (self.rect.centerx + (self.speedX - self.speedX), self.rect.centery + (self.speedY - self.speedY))
+
 
 class Missile(pygame.sprite.Sprite):
     def __init__(self):
@@ -106,13 +111,11 @@ class Missile(pygame.sprite.Sprite):
         # Place missile off-screen at first
         self.rect.center = (-100, 100)
         self.dy = 0
-
-
+        
     def fire(self, player_pos):
             self.rect.center = player_pos  # Move Bomb to cannon.
             self.dy = BOMB_SpeedY              # Set its velocity.
 
-    
     def update(self):
         self.rect.centery -= self.dy
     
@@ -120,8 +123,6 @@ class Missile(pygame.sprite.Sprite):
         self.kill()
         print("Killed!")
     
-
-
 class Label(pygame.sprite.Sprite):
     def __init__(self, textStr, center, fontName, fontSize, textColor):
         pygame.sprite.Sprite.__init__(self)
@@ -188,8 +189,6 @@ def game():
 
     # Create a necessary objects
     player = Player()
-    # missileList = []
-    # missile = Missile()
     enemyList = []
     tickCount = 0
     highScore = 0
@@ -204,19 +203,16 @@ def game():
         eachEnemy = Enemy((positionX, positionY), (speedX, speedY))
         enemyList.append(eachEnemy)
 
-    
-
     # Add them to groups
     playerGroup = pygame.sprite.Group(player)
     missileGroup = pygame.sprite.Group()
     enemyGroup = pygame.sprite.Group(enemyList)
     labelGroup = pygame.sprite.Group(highScoreLabel)
 
-
-    ## Set necessary vars ##
-
     # - a variable that tells if the user won
     win = False
+    # Pause 
+    pause = False
     # - Set FPS of the game
     clock = pygame.time.Clock()
     #  - Set a loop that keeps running until user quits or proceeds
@@ -227,28 +223,33 @@ def game():
         # Every 30 ticks is a second
         tickCount += 1
 
+        # Pause everything in the game. Game is paused if "paused = True", otherwise run.
+        if pause == True:
+            for eachEnemy in enemyGroup:
+                eachEnemy.toggle = False
+            player.toggle = False
+        else:
+            for eachEnemy in enemyGroup:
+                eachEnemy.toggle = True
+            player.toggle = True
+
         # Handle any events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 keepGoing = False 
-                print("hi!")
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
+                # Space-bar shoots missile
+                if event.key == pygame.K_SPACE and pause == False:
                     missile = Missile()
                     missileGroup.add(missile)
                     missile.fire(player.get_pos())
-
-
+                # "P" pauses the game
+                if event.key == pygame.K_p and pause == False:
+                    pause = True
+                elif event.key == pygame.K_p and pause == True:
+                    pause = False
 
         #### Check collisions or any other actions
-        # if missile.rect.bottom < 0:
-        #     missile.reset()
-
-        # if pygame.sprite.spritecollide(missile, enemyGroup, True) :
-        #     highScore += 25 
-        #     highScoreLabel.text = f"Highscore: {highScore}"
-        #     missile.reset()
-
         for missile in missileGroup:
             if pygame.sprite.spritecollide(missile, enemyGroup, True) :
                 highScore += 25 
@@ -261,6 +262,15 @@ def game():
         if len(enemyGroup) == 0:
             level += 1
             print(level)
+            for i in range(ENEMYAMOUNT):
+                positionX = randint( 0, WIDTH)
+                positionY = randint( 0, (HEIGHT//2) )
+                speedX = randint(-ENEMYSPEED, ENEMYSPEED)
+                speedY = randint(-ENEMYSPEED, ENEMYSPEED)
+                eachEnemy = Enemy((positionX, positionY), (speedX, speedY))
+                enemyList.append(eachEnemy)
+            enemyGroup = pygame.sprite.Group(enemyList)    
+
         
         if level == 10:
             keepGoing = False
@@ -323,11 +333,10 @@ def playAgain(winLose):
                 if event.key == pygame.K_y:
                     keepGoing = False
                     replay = True
-                    print("Yes")
                 if event.key == pygame.K_n:
                     keepGoing = False
                     replay = False
-                    print("No")
+
 
         labelGroup.clear(screen, background)
 
