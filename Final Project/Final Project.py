@@ -1,12 +1,15 @@
 # Final Project of CS1: Intro to Game Programming F20 Fall 2020
 # Name: Daeshaun Morrison
-
+# Import sys library
+import sys
+import time as t
 # Import pygame library
 import pygame
 from random import randint
 
 # Init it for use
 pygame.init()
+pygame.mixer.init()
 
 # Set constants 
 WIDTH=640
@@ -77,11 +80,11 @@ class Enemy(pygame.sprite.Sprite):
         (self.speedX, self.speedY) = speed
         # Allows ship to move
         self.toggle = True
+        self.timer = 30
 
     def update(self):
         if self.toggle:
             self.rect.center = (self.rect.centerx + self.speedX, self.rect.centery + self.speedY)
-
             if self.rect.left < 0:
                 self.speedX = abs(self.speedX)
             if self.rect.right > WIDTH :
@@ -92,6 +95,31 @@ class Enemy(pygame.sprite.Sprite):
                 self.rect.bottom = 0
         else :
             self.rect.center = (self.rect.centerx + (self.speedX - self.speedX), self.rect.centery + (self.speedY - self.speedY))
+
+    def reset(self):
+        # timer = 0
+        # for i in range(900):
+        #     tickCount += 1
+        #     if tickCount == 900:
+        #         print("yes")
+        #         tickCount = 0
+        #         self.kill()
+        self.kill()
+
+
+    def explode(self):
+        self.imgMaster = pygame.image.load("Royalty-Free-Game-art-Spaceships-from-Unlucky-Studio.png")
+        self.imgMaster.convert()
+        self.image = pygame.transform.scale( self.image, (50, 50))
+        misImgSize = (100, 120)
+        # Create a surface to draw a section of the spritesheet
+        self.image = pygame.Surface(misImgSize)
+        self.image.blit(self.imgMaster, (0,0), ( (421, 2530) ,(misImgSize)) )
+        self.image.set_colorkey( self.image.get_at((1,1)))
+        self.image = pygame.transform.scale( self.image, (50, 70) )
+
+    def get_pos(self):
+        return self.rect.center
 
 class Missile(pygame.sprite.Sprite):
     def __init__(self):
@@ -110,19 +138,50 @@ class Missile(pygame.sprite.Sprite):
         # Place missile off-screen at first
         self.rect.center = (-100, 100)
         self.dy = 0
+        # Allows it to move
+        self.toggle = True
         
     def fire(self, player_pos):
-            self.rect.center = player_pos  # Move Bomb to cannon.
+            self.rect.center = player_pos  # Move Bomb to player.
             self.dy = BOMB_SpeedY              # Set its velocity.
 
     def update(self):
-        self.rect.centery -= self.dy
-        # Remove sprite when it's off-screen to save memory
-        if self.rect.bottom < 0:
-            self.reset()
-    
+        if self.toggle:
+            self.rect.centery -= self.dy
+            # Remove sprite when it's off-screen to save memory
+            if self.rect.bottom < 0:
+                self.reset()
+        else: 
+            self.rect.centery -= 0
+
+    def get_pos(self):
+        return self.rect.center 
+
     def reset(self):
         self.kill()
+
+
+class Explosion(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.imgMaster = pygame.image.load("Royalty-Free-Game-art-Spaceships-from-Unlucky-Studio.png")
+        self.imgMaster.convert()
+        # self.image = pygame.transform.scale( self.image, (50, 50))
+        misImgSize = (105, 111)
+        # Create a surface to draw a section of the spritesheet
+        self.image = pygame.Surface(misImgSize)
+        self.image.blit(self.imgMaster, (0,0), ( (416, 2530) ,(misImgSize)) )
+        self.image.set_colorkey( self.image.get_at((1,1)))
+        self.image = pygame.transform.scale( self.image, (15, 35) )
+        # Get rect of sprite
+        self.rect = self.image.get_rect()
+        # Place missile off-screen at first
+        self.rect.center = (-100, 100)
+
+    # def update(self):
+    #     self.rect.center = (-100, 100)
+    def blowUp(self, position):
+        self.rect.center = position
     
 class Label(pygame.sprite.Sprite):
     def __init__(self, textStr, center, fontName, fontSize, textColor):
@@ -136,7 +195,6 @@ class Label(pygame.sprite.Sprite):
         self.image = self.font.render(self.text, 1, self.textColor)
         self.rect = self.image.get_rect()
         self.rect.center = self.center
-
 
 def titleScreen():
     # Construct a background
@@ -181,15 +239,23 @@ def titleScreen():
             
 def game():
     # Construct a background
-    background = pygame.Surface(screen.get_size())
+    background = pygame.image.load('Space_Parallax.png')
     # Convert for better preformance
     background = background.convert()
-    # Set background color
-    background.fill( (0, 0, 0) )
-    screen.blit(background, (0, 0))
+    background = pygame.transform.scale(background, screen.get_size())
+    # screen.blit(background, (0, 0))
+    moveY = 0
+
+    # Play music when game starts
+    pygame.mixer.music.load("POL-galactic-trek-short.wav")
+    pygame.mixer.music.play(-1) # play continuously
+    # Set volume, scaled from 0 to 1
+    pygame.mixer.music.set_volume(0.1)
 
     # Create a necessary objects
     player = Player()
+    explosion = Explosion()
+    explodeSound = pygame.mixer.Sound("16-bit-explosion_120bpm_C_major.wav")
     # enemyList = []
     tickCount = 0
     highScore = 0
@@ -202,7 +268,7 @@ def game():
     missileGroup = pygame.sprite.Group()
     # enemyGroup = pygame.sprite.Group(enemyList)
     enemyGroup = pygame.sprite.Group()
-    labelGroup = pygame.sprite.Group(highScoreLabel, levelLabel)
+    labelGroup = pygame.sprite.Group(highScoreLabel, levelLabel, explosion)
 
     # - a variable that tells if the user won
     win = False
@@ -217,31 +283,37 @@ def game():
         clock.tick(CLOCK_TICK)
         # Every 30 ticks is a second
         tickCount += 1
+        # Create Scrolling background
+        rel_moveY = moveY % background.get_rect().height
+        screen.blit(background, (0, rel_moveY - background.get_rect().height))
+        if rel_moveY < HEIGHT:
+            screen.blit(background, (0, rel_moveY))
+        moveY += 1
 
         # Create New list of enemy for each level
-        enemyList = []
-
         if len(enemyGroup) == 0:
             level += 1
             levelLabel.text = f"Level: {level}"
-            enemyList.clear
             for i in range(ENEMYAMOUNT):
                 positionX = randint( 0, WIDTH)
-                positionY = randint( 0, (HEIGHT//2) )
+                positionY = randint( -20, 0 )
                 speedX = randint(-ENEMYSPEED, ENEMYSPEED)
-                speedY = randint(-ENEMYSPEED, ENEMYSPEED)
+                speedY = randint(3, ENEMYSPEED)
                 eachEnemy = Enemy((positionX, positionY), (speedX, speedY))
-                enemyList.append(eachEnemy)
-            enemyGroup = pygame.sprite.Group(enemyList) 
+                enemyGroup.add(eachEnemy)
 
         # Pause everything in the game. Game is paused if "paused = True", otherwise run.
         if pause == True:
             for eachEnemy in enemyGroup:
                 eachEnemy.toggle = False
+            for missile in missileGroup:
+                missile.toggle = False
             player.toggle = False
         else:
             for eachEnemy in enemyGroup:
                 eachEnemy.toggle = True
+            for missile in missileGroup:
+                missile.toggle = True
             player.toggle = True
 
         # Handle any events
@@ -259,30 +331,44 @@ def game():
                     pause = True
                 elif event.key == pygame.K_p and pause == True:
                     pause = False
-
+                if event.key == pygame.K_q:
+                    sys.exit()  
         #### Check collisions or any other actions
-        for missile in missileGroup:
-            if pygame.sprite.spritecollide(missile, enemyGroup, True) :
+        # Make a list of enemies, adding them into it when they collide with a missile
+        deadEnemy = []
+        for eachEnemy in enemyGroup: 
+            if pygame.sprite.spritecollide(eachEnemy, missileGroup, False):
+                # eachEnemy.explode()
                 highScore += 25 
                 highScoreLabel.text = f"Highscore: {highScore}"
+                explodeSound.play()
+                deadEnemy.append(eachEnemy)
+        
+        for missile in missileGroup:
+            if pygame.sprite.spritecollide(missile, enemyGroup, False) :
                 missile.reset()
-
+                explodeSound.play()
+        # Then remove enemy from group
+        # If enemy was removed too soon. The the loop above wouldn't detech any collisions
+        for eachEnemy in deadEnemy: 
+            eachEnemy.explode()  
+            eachEnemy.reset()
+        
+                
         if pygame.sprite.spritecollide(player, enemyGroup, True) :
             keepGoing = False
         
         if level == 10:
             keepGoing = False
             win = True
-            
-        playerGroup.clear(screen, background)
-        enemyGroup.clear(screen, background)
+
         labelGroup.clear(screen, background)
         missileGroup.clear(screen, background)
 
         playerGroup.update()
         enemyGroup.update()
-        labelGroup.update()
         missileGroup.update()
+        labelGroup.update()
 
         playerGroup.draw(screen)
         enemyGroup.draw(screen)
