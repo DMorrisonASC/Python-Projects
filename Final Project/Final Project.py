@@ -290,14 +290,20 @@ class Label(pygame.sprite.Sprite):
         self.rect.center = self.center
 
 def titleScreen():
+    # # Construct a background
+    # background = pygame.Surface(screen.get_size())
+    # # Convert for better preformance
+    # background = background.convert()
+    # # Set background color
+    # background.fill( (0, 0, 0) )
+    # screen.blit(background, (0, 0))
     # Construct a background
-    background = pygame.Surface(screen.get_size())
+    background = pygame.image.load('Space_Parallax.png')
     # Convert for better preformance
     background = background.convert()
-    # Set background color
-    background.fill( (0, 0, 0) )
-    screen.blit(background, (0, 0))
-    # Ask professor about this - screen.fill((0, 0, 0))
+    background = pygame.transform.scale(background, screen.get_size())
+    # screen.blit(background, (0, 0))
+    moveY = 0
 
     # Construct labels for title, objective and controls. 
     # It stays until user proceeds or quits game.
@@ -315,14 +321,19 @@ def titleScreen():
     while keepGoing:
         # Set FPS of the game - 30 frames per second/tick
         clock.tick(CLOCK_TICK)
+        # Create Scrolling background
+        rel_moveY = moveY % background.get_rect().height
+        screen.blit(background, (0, rel_moveY - background.get_rect().height))
+        if rel_moveY < HEIGHT:
+            screen.blit(background, (0, rel_moveY))
+        moveY += 1
         # Handle any events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 keepGoing = False
             if event.type == pygame.MOUSEBUTTONDOWN:
                 keepGoing = False
-        # Update the display
-        labelGroup.clear(screen, background)
+        # Update the displayq
 
         labelGroup.update()
 
@@ -519,7 +530,7 @@ def game():
         if pygame.sprite.spritecollide(player, enemyMissileGroup, True) :
             keepGoing = False
         
-        if level == 10:
+        if level == 50:
             keepGoing = False
             win = True
 
@@ -542,7 +553,7 @@ def game():
 
         pygame.display.flip()
     
-    return win
+    return (win, highScore)
 
 def playAgain(winLose):
     # Construct a background
@@ -555,16 +566,19 @@ def playAgain(winLose):
 
     # Get from variable "game()" and check if it's true or false.
     # winLose = True, user won.  winLose = False, user lost.
-    winOrLose = winLose
+    winOrLose = winLose[0]
+    highScore = winLose[1]
 
     if winOrLose == True :
         gameResult = Label("You Won!", ( (WIDTH//2), (HEIGHT//2)), defaultFont, 25, BLUE)
-        playAgainTxt = Label("Play again(Y/N)", ( (WIDTH//2), (HEIGHT//2) + 30), defaultFont, 25, BLUE)
+        highScoreTxt = Label(f"Highscore: {highScore}", ( (WIDTH//2), (HEIGHT//2) + 30), defaultFont, 25, BLUE)
+        playAgainTxt = Label("Play again(Y/N)", ( (WIDTH//2), (HEIGHT//2) + 60), defaultFont, 25, BLUE)
     else: 
         gameResult = Label("You Lost!", ( (WIDTH//2), (HEIGHT//2)), defaultFont, 25, RED)
-        playAgainTxt= Label("Play again(Y/N)", ( (WIDTH//2), (HEIGHT//2) + 30), defaultFont, 25, RED)
+        highScoreTxt= Label(f"Highscore: {highScore}", ( (WIDTH//2), (HEIGHT//2) + 30), defaultFont, 25, RED)
+        playAgainTxt= Label("Play again(Y/N)", ( (WIDTH//2), (HEIGHT//2) + 60), defaultFont, 25, RED)
     
-    labelGroup = pygame.sprite.Group(gameResult, playAgainTxt)
+    labelGroup = pygame.sprite.Group(gameResult, playAgainTxt, highScoreTxt)
 
     replay = False
     # Set FPS of the game
