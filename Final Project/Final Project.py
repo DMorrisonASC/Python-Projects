@@ -32,52 +32,9 @@ MAGENTA   = (255,0,255)
 CYAN      = (0,255,255)
 WHITE     = (255,255,255)
 
-
 # Set window size and caption
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Space Defender - Daeshaun Morrison")
-
-# class Player(pygame.sprite.Sprite):
-#     # Initialize the sprite.
-#     def __init__(self):
-#         pygame.sprite.Sprite.__init__(self)
-#         # Load img in folder
-#         self.image = pygame.image.load("spaceship.png")
-#         self.image = self.image.convert()
-#         self.image = pygame.transform.scale( self.image, (50, 50))
-#         self.image.set_colorkey( self.image.get_at( (1,1) ) )
-#         self.rect = self.image.get_rect() 
-#         self.rect.center = (300, 400)
-#         # Allows ship to move
-#         self.toggle = True
-    
-#     def update(self):
-#         # Allow the user to move using the arrow keys or awsd keys.
-#         # pygame.key.get_pressed() returns a
-#         # list of booleans, one for each key.
-#         # More than one key can be pressed.
-
-#         keys = pygame.key.get_pressed()     
-#         if keys[pygame.K_RIGHT] and self.rect.right < WIDTH and self.toggle == True:            
-#             self.rect.centerx += SHIPSPEED         
-#         if keys[pygame.K_LEFT] and self.rect.left > 0 and self.toggle == True:         
-#             self.rect.centerx -= SHIPSPEED      
-#         if keys[pygame.K_UP] and self.rect.top > 0 and self.toggle == True:             
-#             self.rect.centery -= SHIPSPEED      
-#         if keys[pygame.K_DOWN] and self.rect.bottom < HEIGHT and self.toggle == True:
-#             self.rect.centery += SHIPSPEED
-#         # 
-#         if keys[pygame.K_d] and self.rect.right < WIDTH and self.toggle == True:            
-#             self.rect.centerx += SHIPSPEED         
-#         if keys[pygame.K_a] and self.rect.left > 0 and self.toggle == True:         
-#             self.rect.centerx -= SHIPSPEED      
-#         if keys[pygame.K_w] and self.rect.top > 0 and self.toggle == True:             
-#             self.rect.centery -= SHIPSPEED      
-#         if keys[pygame.K_s] and self.rect.bottom < HEIGHT and self.toggle == True:
-#             self.rect.centery += SHIPSPEED
-
-#     def get_pos(self):
-#         return self.rect.center
 
 class Player(pygame.sprite.Sprite):
     # Initialize the sprite.
@@ -95,12 +52,12 @@ class Player(pygame.sprite.Sprite):
         self.rect.center = (300, 400)
         # Allows ship to move
         self.toggle = True
-        
+
     def loadImage(self):
         self.imgList = []
 
         for i in range(1, 5) :
-            self.image = pygame.image.load(f"spaceship_blue_animation/{i}.png")
+            self.image = pygame.image.load(f"assets\sprites\spaceship_blue_animation/{i}.png")
             self.image = self.image.convert()
             self.transColor = self.image.get_at((1,1))
             self.image.set_colorkey(self.transColor)
@@ -114,8 +71,7 @@ class Player(pygame.sprite.Sprite):
             self.pause = 0
             self.frame += 1
             if self.frame >= len(self.imgList):
-                self.frame = 0
-                
+                self.frame = 0            
             self.image = self.imgList[self.frame]
         # Allow the user to move using the arrow keys or awsd keys.
         # pygame.key.get_pressed() returns a
@@ -148,7 +104,7 @@ class Missile(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
         # Get image of the whole spritesheet
-        self.imgMaster = pygame.image.load("Royalty-Free-Game-art-Spaceships-from-Unlucky-Studio.png")
+        self.imgMaster = pygame.image.load("assets\sprites\Royalty-Free-Game-art-Spaceships-from-Unlucky-Studio.png")
         self.imgMaster.convert()
         misImgSize = (45, 77)
         # Create a surface to draw a section of the spritesheet
@@ -183,39 +139,6 @@ class Missile(pygame.sprite.Sprite):
     def reset(self):
         self.kill()
 
-# class Enemy(pygame.sprite.Sprite):
-#     def __init__(self, position, speed):
-#         pygame.sprite.Sprite.__init__(self)
-#         self.image = pygame.image.load("enemy-spaceship-sprite.png")
-#         self.image = self.image.convert()
-#         self.image = pygame.transform.scale( self.image, (50, 50))
-#         self.image.set_colorkey( self.image.get_at( (1,1) ) )
-#         self.rect = self.image.get_rect() 
-#         self.rect.center = position
-#         (self.speedX, self.speedY) = speed
-#         # Allows ship to move
-#         self.toggle = True
-
-#     def update(self):
-#         if self.toggle:
-#             self.rect.center = (self.rect.centerx + self.speedX, self.rect.centery + self.speedY)
-#             if self.rect.left < 0:
-#                 self.speedX = abs(self.speedX)
-#             if self.rect.right > WIDTH :
-#                 self.speedX = -1 * abs(self.speedX)
-#             if self.rect.top < 0:
-#                 self.speedY = abs(self.speedY)
-#             if self.rect.top > HEIGHT:
-#                 self.rect.bottom = 0
-#         else :
-#             self.rect.center = (self.rect.centerx + (self.speedX - self.speedX), self.rect.centery + (self.speedY - self.speedY))
-
-#     def reset(self):
-#         self.kill()
-  
-#     def get_pos(self):
-#         return self.rect.center
-
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, position, speed):
         pygame.sprite.Sprite.__init__(self)
@@ -237,7 +160,7 @@ class Enemy(pygame.sprite.Sprite):
         self.imgList = []
 
         for i in range(1, 9) :
-            self.image = pygame.image.load(f"Enemy_animation/{i}.png")
+            self.image = pygame.image.load(f"assets\sprites\Enemy_animation\{i}.png")
             self.image = self.image.convert()
             self.transColor = self.image.get_at((1,1))
             self.image.set_colorkey(self.transColor)
@@ -278,7 +201,7 @@ class Boss(pygame.sprite.Sprite):
     def __init__(self, position, speed):
         # Get image of the whole spritesheet
         pygame.sprite.Sprite.__init__(self)
-        self.imgMaster = pygame.image.load("Royalty-Free-Game-art-Spaceships-from-Unlucky-Studio.png")
+        self.imgMaster = pygame.image.load("assets\sprites\Royalty-Free-Game-art-Spaceships-from-Unlucky-Studio.png") 
         self.imgMaster.convert()
         misImgSize = (237, 230)
         # Create a surface to draw a section of the spritesheet
@@ -327,7 +250,7 @@ class EnemyMissile(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
         # Get image of the whole spritesheet
-        self.imgMaster = pygame.image.load("Royalty-Free-Game-art-Spaceships-from-Unlucky-Studio.png")
+        self.imgMaster = pygame.image.load("assets\sprites\Royalty-Free-Game-art-Spaceships-from-Unlucky-Studio.png")
         self.imgMaster.convert()
         misImgSize = (45, 77)
         # Create a surface to draw a section of the spritesheet
@@ -379,7 +302,7 @@ class EnemyMissile(pygame.sprite.Sprite):
 class Explosion(pygame.sprite.Sprite):
     def __init__(self, position):
         pygame.sprite.Sprite.__init__(self)
-        self.imgMaster = pygame.image.load("Royalty-Free-Game-art-Spaceships-from-Unlucky-Studio.png")
+        self.imgMaster = pygame.image.load("assets\sprites\Royalty-Free-Game-art-Spaceships-from-Unlucky-Studio.png")
         self.imgMaster.convert()
         misImgSize = (105, 111)
         # Create a surface to draw a section of the spritesheet
@@ -421,7 +344,7 @@ def titleScreen():
     # background.fill( (0, 0, 0) )
     # screen.blit(background, (0, 0))
     # Construct a background
-    background = pygame.image.load('Space_Parallax.png')
+    background = pygame.image.load("assets\\background\Space_Parallax.png")
     # Convert for better preformance
     background = background.convert()
     background = pygame.transform.scale(background, screen.get_size())
@@ -466,7 +389,7 @@ def titleScreen():
             
 def game():
     # Construct a background
-    background = pygame.image.load('Space_Parallax.png')
+    background = pygame.image.load("assets\\background\Space_Parallax.png")
     # Convert for better preformance
     background = background.convert()
     background = pygame.transform.scale(background, screen.get_size())
@@ -474,14 +397,14 @@ def game():
     moveY = 0
 
     # Play music when game starts
-    pygame.mixer.music.load("POL-galactic-trek-short.wav")
+    pygame.mixer.music.load("assets\sounds\POL-galactic-trek-short.wav")
     pygame.mixer.music.play(-1) # play continuously
     # Set volume, scaled from 0 to 1
     pygame.mixer.music.set_volume(0.1)
 
     # Create a necessary objects
     player = Player()
-    explodeSound = pygame.mixer.Sound("16-bit-explosion_120bpm_C_major.wav")
+    explodeSound = pygame.mixer.Sound(r"assets\sounds\\16-bit-explosion_120bpm_C_major.wav")
     tickCount = 0
     highScore = 0
     level = 0
