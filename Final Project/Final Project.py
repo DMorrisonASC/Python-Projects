@@ -20,6 +20,7 @@ SHIPSPEED = 10
 ENEMYSPEED = 5
 ENEMYAMOUNT = 5
 defaultFont = r"assets\\fonts\\NerkoOne-Regular.ttf"
+BOMB_SpeedX = 7
 BOMB_SpeedY = 25
 BOMB_AMOUNT = 5
 # Some basic colors
@@ -52,10 +53,13 @@ class Player(pygame.sprite.Sprite):
         self.rect.center = (300, 400)
         # Allows ship to move
         self.toggle = True
+        # Set a var that allows ship to shoot multi-missiles
+        self.multiShot = False
+        # Set timer for multiShot
+        self.multiShotTimer = 0
 
     def loadImage(self):
         self.imgList = []
-
         for i in range(1, 5) :
             self.image = pygame.image.load(f"assets\sprites\spaceship_blue_animation/{i}.png")
             self.image = self.image.convert()
@@ -73,6 +77,15 @@ class Player(pygame.sprite.Sprite):
             if self.frame >= len(self.imgList):
                 self.frame = 0            
             self.image = self.imgList[self.frame]
+        # If the player got the multi-shot power, set a timer.
+        # When timer reaches 
+        if self.multiShot == True:
+            self.multiShotTimer += 1
+            if self.multiShotTimer > CLOCK_TICK * 5:
+                self.multiShotTimer = 0
+                self.multiShot = False
+                print(self.multiShot)
+
         # Allow the user to move using the arrow keys or awsd keys.
         # pygame.key.get_pressed() returns a
         # list of booleans, one for each key.
@@ -116,21 +129,38 @@ class Missile(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         # Place missile off-screen at first
         self.rect.center = (-100, 100)
+        self.dx = 0
         self.dy = 0
         # Allows it to move
         self.toggle = True
         
     def fire(self, player_pos):
             self.rect.center = player_pos  # Move Bomb to player.
-            self.dy = BOMB_SpeedY              # Set its velocity.
+            self.dy = -BOMB_SpeedY              # Set its velocity.
+
+    def fireRight(self, player_pos):
+            self.rect.center = player_pos
+            # Rotate it to make it look like it's going to the right
+            self.image = pygame.transform.rotate(self.image, 345)
+            self.dy = -BOMB_SpeedY 
+            self.dx = BOMB_SpeedX
+
+    def fireLeft(self, player_pos):
+            self.rect.center = player_pos
+            # Rotate it to make it look like it's going to the left
+            self.image = pygame.transform.rotate(self.image, 25)
+            self.dy = -BOMB_SpeedY 
+            self.dx = -BOMB_SpeedX
 
     def update(self):
         if self.toggle:
-            self.rect.centery -= self.dy
+            self.rect.centerx += self.dx 
+            self.rect.centery += self.dy           
             # Remove sprite when it's off-screen to save memory
             if self.rect.bottom < 0:
                 self.reset()
         else: 
+            self.rect.centerx -= 0
             self.rect.centery -= 0
 
     def get_pos(self):
@@ -224,10 +254,13 @@ class Boss(pygame.sprite.Sprite):
         if self.toggle:
             # Set a shoot delay. Count to X(30 tick), then reset the timer.
             # The timer is used to tell the program to shoot a enemyMissile from
-            # Boss shoots a missile every X amount of seconds(In this case its 1 sec)
+            # Boss shoots a missile every X amount of seconds.
+            # CLOCK_TICK = 1 second
             self.shoot_delay += 1
-            if self.shoot_delay > CLOCK_TICK:
+            if self.shoot_delay > (CLOCK_TICK * 3):
                 self.shoot_delay = 0
+            # Move it each time update runs. Ex. If CLOCK_TICK = 30,
+            # the update runs 30x per second(30FPS)
             self.rect.center = (self.rect.centerx + self.speedX, self.rect.centery + self.speedY)
             if self.rect.left < 0:
                 self.speedX = abs(self.speedX)
@@ -269,16 +302,22 @@ class EnemyMissile(pygame.sprite.Sprite):
         self.toggle = True
         
     def fire(self, enemy_pos):
-            self.rect.center = enemy_pos  # Move Bomb to player.
-            self.dy = 10              # Set its velocity.
+            # Move Bomb to an enemy
+            self.rect.center = enemy_pos  
+            # Set its velocity to shot it
+            self.dy = 10             
 
-    def fire90Angle(self, enemy_pos):
-            self.rect.center = enemy_pos  # Move Bomb to player.
+    def fireRight(self, enemy_pos):
+            self.rect.center = enemy_pos
+            # Rotate it to make it look like it's going to the right
+            self.image = pygame.transform.rotate(self.image, 45)
             self.dy = 10 
             self.dx = 5
 
-    def fire270Angle(self, enemy_pos):
-            self.rect.center = enemy_pos  # Move Bomb to player.
+    def fireLeft(self, enemy_pos):
+            self.rect.center = enemy_pos
+            # Rotate it to make it look like it's going to the left
+            self.image = pygame.transform.rotate(self.image, 315)
             self.dy = 10 
             self.dx = -5
 
@@ -321,6 +360,50 @@ class Explosion(pygame.sprite.Sprite):
         if self.delay == CLOCK_TICK:
             self.kill()
 
+class MultiShotPowerUp(pygame.sprite.Sprite):
+    def __init__(self, position, speed):
+        pygame.sprite.Sprite.__init__(self)
+        # Get image of the whole spritesheet
+        self.imgMaster = pygame.image.load("assets\sprites\powerUpSpriteSheet.png")
+        self.imgMaster.convert()
+        misImgSize = (135, 100)
+        # Create a surface to draw a section of the spritesheet
+        self.image = pygame.Surface(misImgSize)
+        self.image.blit(self.imgMaster, (0,0), ( (656, 37),(misImgSize)) )
+        self.image.set_colorkey( self.image.get_at((1,1)))
+        self.image = pygame.transform.scale( self.image, (40, 40) )
+        self.image = pygame.transform.rotate(self.image, 237)
+        # Get rect of sprite
+        self.rect = self.image.get_rect()
+        # Place missile off-screen at first
+        self.rect.center = position
+        (self.dx, self.dy) = speed
+        # Allows it to move
+        self.toggle = True
+
+    def update(self):
+        if self.toggle:
+            # Move it each time update runs. Ex. If CLOCK_TICK = 30,
+            # the update runs 30x per second(30FPS)
+            self.rect.center = (self.rect.centerx + self.dx, self.rect.centery + self.dy)
+            if self.rect.left < 0:
+                self.dx = abs(self.dx)
+            if self.rect.right > WIDTH :
+                self.dx = -1 * abs(self.dx)
+            if self.rect.top < 0:
+                self.dy = abs(self.dy)
+            # Remove sprite when it's off-screen to save memory
+            if self.rect.top > HEIGHT:
+                self.reset()
+        else: 
+            self.rect.centerx += 0
+            self.rect.centery += 0
+
+    def get_pos(self):
+        return self.rect.center 
+
+    def reset(self):
+        self.kill()
     
 class Label(pygame.sprite.Sprite):
     def __init__(self, textStr, center, fontName, fontSize, textColor):
@@ -336,13 +419,6 @@ class Label(pygame.sprite.Sprite):
         self.rect.center = self.center
 
 def titleScreen():
-    # # Construct a background
-    # background = pygame.Surface(screen.get_size())
-    # # Convert for better preformance
-    # background = background.convert()
-    # # Set background color
-    # background.fill( (0, 0, 0) )
-    # screen.blit(background, (0, 0))
     # Construct a background
     background = pygame.image.load("assets\\background\Space_Parallax.png")
     # Convert for better preformance
@@ -350,7 +426,6 @@ def titleScreen():
     background = pygame.transform.scale(background, screen.get_size())
     # screen.blit(background, (0, 0))
     moveY = 0
-
     # Construct labels for title, objective and controls. 
     # It stays until user proceeds or quits game.
     # Adding them to a group is one step needs to update any changes made to them and collision detection
@@ -358,8 +433,7 @@ def titleScreen():
     goal = Label("Fight off alien ships as long as possible to gain the highest score!", ( (WIDTH//2), ((HEIGHT//2) + 30) ), defaultFont, 23, WHITE)
     instr = Label("Move using arrow keys and use spacebar to shoot", ( (WIDTH//2), (HEIGHT//2) + 60), defaultFont, 25, WHITE)
     startGametxt = Label("Click to start!", ( (WIDTH//2), (HEIGHT//2) + 90), defaultFont, 25, WHITE)
-    labelGroup = pygame.sprite.Group(title, goal, instr, startGametxt, )
-    
+    labelGroup = pygame.sprite.Group(title, goal, instr, startGametxt) 
     # Set FPS of the game
     clock = pygame.time.Clock()
     # Set a loop that keeps running until user quits or proceeds
@@ -379,12 +453,11 @@ def titleScreen():
                 keepGoing = False
             if event.type == pygame.MOUSEBUTTONDOWN:
                 keepGoing = False
-        # Update the displayq
-
+        # Update the display
         labelGroup.update()
-
+        # Draw the display
         labelGroup.draw(screen)
-
+        # Put it to the screen
         pygame.display.flip()
             
 def game():
@@ -395,13 +468,11 @@ def game():
     background = pygame.transform.scale(background, screen.get_size())
     # screen.blit(background, (0, 0))
     moveY = 0
-
     # Play music when game starts
     pygame.mixer.music.load("assets\sounds\POL-galactic-trek-short.wav")
     pygame.mixer.music.play(-1) # play continuously
     # Set volume, scaled from 0 to 1
     pygame.mixer.music.set_volume(0.1)
-
     # Create a necessary objects
     player = Player()
     explodeSound = pygame.mixer.Sound("assets\sounds\\16-bit-explosion_120bpm_C_major.wav")
@@ -411,16 +482,15 @@ def game():
     highScoreLabel = Label(f"Highscore: {highScore}", (100, 50), defaultFont, 25, WHITE)
     levelLabel = Label(f"Level: {level}", ((WIDTH - 100), 50), defaultFont, 25, WHITE)
     pausedLabel = Label(f"", ((WIDTH//2), (HEIGHT//2)), defaultFont, 65, WHITE)
-
     # Add them to groups
     playerGroup = pygame.sprite.Group(player)
     missileGroup = pygame.sprite.Group()
+    powerUpGroup = pygame.sprite.Group()
     enemyGroup = pygame.sprite.Group()
     enemyMissileGroup = pygame.sprite.Group()
     bossGroup = pygame.sprite.Group()
     allEnemyGroup = pygame.sprite.Group(enemyGroup, bossGroup)
     labelGroup = pygame.sprite.Group(highScoreLabel, levelLabel, pausedLabel)
-
     # - a variable that tells if the user won
     win = False
     # Pause 
@@ -440,7 +510,16 @@ def game():
         if rel_moveY < HEIGHT:
             screen.blit(background, (0, rel_moveY))
         moveY += 1
-
+        # Set a var that will be a rand interger from X to X
+        powerUpChance = randint(1, 100)
+        # If it "powerUpChance" is X, spawn it. This will it a X% spawn rate
+        if powerUpChance == 1 and pause == False :
+            positionX = randint( 0, WIDTH)
+            positionY = randint( 0, 50 )
+            speedX = randint(3, 5)
+            speedY = randint(3, 5)
+            multiShotPowerUp = MultiShotPowerUp((positionX, positionY), (speedX, speedY))
+            powerUpGroup.add(multiShotPowerUp)
         # Create New list of enemy for each level
         if len(enemyGroup) == 0 and len(bossGroup) == 0:
             level += 1
@@ -450,14 +529,14 @@ def game():
                 for i in range(2):
                     positionX = randint( 0, WIDTH)
                     positionY = randint( 20, 50 )
-                    speedX = 12
+                    speedX = random.choice([-10, 10])
                     speedY = 0
                     boss = Boss((positionX, positionY), (speedX, speedY))
                     bossGroup.add(boss)
             elif level % 5 == 0:
                 positionX = randint( 0, WIDTH)
                 positionY = randint( 20, 50 )
-                speedX = 12
+                speedX = random.choice([-10, 10])
                 speedY = 0
                 boss = Boss((positionX, positionY), (speedX, speedY))
                 bossGroup.add(boss)
@@ -469,13 +548,13 @@ def game():
                     speedY = randint(3, ENEMYSPEED)
                     eachEnemy = Enemy((positionX, positionY), (speedX, speedY))
                     enemyGroup.add(eachEnemy)
-        
-
         # Pause everything in the game. Game is paused if "paused == True", otherwise run.
         # Also put "paused" text in the middle of screen when "paused == True"
         if pause == True:
             pausedLabel.text = f"Paused"
             player.toggle = False
+            for eachPowerUp in powerUpGroup:
+                eachPowerUp.toggle = False
             for eachEnemy in enemyGroup:
                 eachEnemy.toggle = False
             for eachBoss in bossGroup:
@@ -483,11 +562,12 @@ def game():
             for missile in missileGroup:
                 missile.toggle = False
             for enemyMissile in enemyMissileGroup:
-                enemyMissile.toggle = False
-            
+                enemyMissile.toggle = False 
         else:
             pausedLabel.text = f""
             player.toggle = True
+            for eachPowerUp in powerUpGroup:
+                eachPowerUp.toggle = True
             for eachEnemy in enemyGroup:
                 eachEnemy.toggle = True
             for eachBoss in bossGroup:
@@ -502,7 +582,21 @@ def game():
                 keepGoing = False 
             if event.type == pygame.KEYDOWN:
                 # Space-bar shoots missile
-                if event.key == pygame.K_SPACE and pause == False:
+                # If player gets power up, shoot 3 missiles!
+                if event.key == pygame.K_SPACE and pause == False and player.multiShot == True:
+                    # 1st missile
+                    missile = Missile()
+                    missileGroup.add(missile)
+                    missile.fire(player.get_pos())
+                    # 2nd missile
+                    missile2 = Missile()
+                    missileGroup.add(missile2)
+                    missile2.fireRight(player.get_pos())
+                    # 3rd missile
+                    missile3 = Missile()
+                    missileGroup.add(missile3)
+                    missile3.fireLeft(player.get_pos())
+                elif event.key == pygame.K_SPACE and pause == False:
                     missile = Missile()
                     missileGroup.add(missile)
                     missile.fire(player.get_pos())
@@ -519,7 +613,6 @@ def game():
         resetMisList = []
 
         for eachEnemy in enemyGroup: 
-            # print(tickCounts)
             tickCounts = randint(1, 100)
             if tickCounts == 1 and eachEnemy.toggle == True:
                 enemyMissile = EnemyMissile()
@@ -543,11 +636,11 @@ def game():
                 # Second missile that shoots at an angle
                 enemyMissile2 = EnemyMissile()
                 enemyMissileGroup.add(enemyMissile2)
-                enemyMissile2.fire90Angle(eachBoss.get_pos())
+                enemyMissile2.fireRight(eachBoss.get_pos())
                 # Third missile that shoots at an angle
                 enemyMissile3 = EnemyMissile()
                 enemyMissileGroup.add(enemyMissile3)
-                enemyMissile3.fire270Angle(eachBoss.get_pos())
+                enemyMissile3.fireLeft(eachBoss.get_pos())
 
             if pygame.sprite.spritecollide(eachBoss, missileGroup, False):
                 eachBoss.hit += 1
@@ -565,7 +658,14 @@ def game():
             if pygame.sprite.spritecollide(missile, enemyGroup, False) :
                 explodeSound.play()
                 resetMisList.append(missile)
-
+        for eachPowerUp in powerUpGroup:        
+            if pygame.sprite.spritecollide(eachPowerUp, playerGroup, False) :
+                # Player hits a power up, allow it to shoot multiple missiles
+                # Set the multishot timer to 0 if the player gets a power up while already
+                # powered up
+                player.multiShot = True
+                player.multiShotTimer = 0
+                eachPowerUp.reset()
         # Then remove enemy from group
         # If enemy was removed too soon. The the loop above wouldn't detech any collisions
         for eachEnemy in deadEnemy:   
@@ -573,18 +673,20 @@ def game():
         # Then remove missile from group
         for eachMis in resetMisList:
             eachMis.reset()
-            
+        # End game if player collides with an enemy   
         if pygame.sprite.spritecollide(player, enemyGroup, True) :
             keepGoing = False
+        # End game if player collides with an enemy's missile   
         if pygame.sprite.spritecollide(player, enemyMissileGroup, True) :
             keepGoing = False
-        
+        # Player wins if they get to lvl X 
         if level == 50:
             keepGoing = False
             win = True
-
+        # Update and draw/render all the groups
         playerGroup.update()
         missileGroup.update()
+        powerUpGroup.update()
         enemyGroup.update()
         enemyMissileGroup.update()
         bossGroup.update()
@@ -593,12 +695,12 @@ def game():
 
         playerGroup.draw(screen)
         missileGroup.draw(screen)
+        powerUpGroup.draw(screen)
         enemyGroup.draw(screen)
         enemyMissileGroup.draw(screen)
         bossGroup.draw(screen)
         allEnemyGroup.draw(screen)
         labelGroup.draw(screen)
-
 
         pygame.display.flip()
     
