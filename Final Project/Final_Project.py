@@ -23,6 +23,7 @@ defaultFont = r"assets\\fonts\\NerkoOne-Regular.ttf"
 BOMB_SpeedX = 7
 BOMB_SpeedY = 25
 BOMB_AMOUNT = 5
+SPEEDBOOST = 5
 # Some basic colors
 BLACK     = (0,0,0)
 RED       = (255,0,0)
@@ -55,8 +56,11 @@ class Player(pygame.sprite.Sprite):
         self.toggle = True
         # Set a var that allows ship to shoot multi-missiles
         self.multiShot = False
+        self.speedBoost = False
         # Set timer for multiShot
         self.multiShotTimer = 0
+        # Set timer for speedBoost
+        self.speedBoostTimer = 0
 
     def loadImage(self):
         self.imgList = []
@@ -77,14 +81,20 @@ class Player(pygame.sprite.Sprite):
             if self.frame >= len(self.imgList):
                 self.frame = 0            
             self.image = self.imgList[self.frame]
-        # If the player got the multi-shot power, set a timer.
-        # When timer reaches 
+        # If the player collides with a power, set a timer.
+        # When timer reaches a __ seconds, turn it off
         if self.multiShot == True:
             self.multiShotTimer += 1
             if self.multiShotTimer > CLOCK_TICK * 5:
                 self.multiShotTimer = 0
                 self.multiShot = False
-                print(self.multiShot)
+
+        if self.speedBoost == True:
+            self.speedBoostTimer += 1
+            if self.speedBoostTimer > CLOCK_TICK * 5:
+                self.speedBoostTimer = 0
+                self.speedBoost = False
+                print(self.speedBoost)
 
         # Allow the user to move using the arrow keys or awsd keys.
         # pygame.key.get_pressed() returns a
@@ -92,23 +102,48 @@ class Player(pygame.sprite.Sprite):
         # More than one key can be pressed.
         keys = pygame.key.get_pressed()     
         # Arrow keys
-        if keys[pygame.K_RIGHT] and self.rect.right < WIDTH and self.toggle == True:            
-            self.rect.centerx += SHIPSPEED         
-        if keys[pygame.K_LEFT] and self.rect.left > 0 and self.toggle == True:         
-            self.rect.centerx -= SHIPSPEED      
-        if keys[pygame.K_UP] and self.rect.top > 0 and self.toggle == True:             
-            self.rect.centery -= SHIPSPEED      
+        if keys[pygame.K_RIGHT] and self.rect.right < WIDTH and self.toggle == True: 
+            # If player collect speed boost(powerUp), increase their speed by ___
+            if self.speedBoost == True :
+                self.rect.centerx += (SHIPSPEED + SPEEDBOOST)
+            else : 
+                self.rect.centerx += SHIPSPEED         
+        if keys[pygame.K_LEFT] and self.rect.left > 0 and self.toggle == True: 
+            if self.speedBoost == True :
+                self.rect.centerx -= (SHIPSPEED + SPEEDBOOST)        
+            else :
+                self.rect.centerx -= SHIPSPEED      
+        if keys[pygame.K_UP] and self.rect.top > 0 and self.toggle == True:   
+            if self.speedBoost == True :
+                self.rect.centery -= (SHIPSPEED + SPEEDBOOST) 
+            else :  
+                self.rect.centery -= SHIPSPEED      
         if keys[pygame.K_DOWN] and self.rect.bottom < HEIGHT and self.toggle == True:
-            self.rect.centery += SHIPSPEED
+            if self.speedBoost == True :
+                self.rect.centery += (SHIPSPEED + SPEEDBOOST)
+            else :    
+                self.rect.centery += SHIPSPEED
         # AWSD keys
         if keys[pygame.K_d] and self.rect.right < WIDTH and self.toggle == True:            
-            self.rect.centerx += SHIPSPEED         
+            if self.speedBoost == True :
+                self.rect.centerx += (SHIPSPEED + SPEEDBOOST)
+            else : 
+                self.rect.centerx += SHIPSPEED          
         if keys[pygame.K_a] and self.rect.left > 0 and self.toggle == True:         
-            self.rect.centerx -= SHIPSPEED      
+            if self.speedBoost == True :
+                self.rect.centerx -= (SHIPSPEED + SPEEDBOOST)        
+            else :
+                self.rect.centerx -= SHIPSPEED   
         if keys[pygame.K_w] and self.rect.top > 0 and self.toggle == True:             
-            self.rect.centery -= SHIPSPEED      
+            if self.speedBoost == True :
+                self.rect.centery -= (SHIPSPEED + SPEEDBOOST) 
+            else :  
+                self.rect.centery -= SHIPSPEED      
         if keys[pygame.K_s] and self.rect.bottom < HEIGHT and self.toggle == True:
-            self.rect.centery += SHIPSPEED
+            if self.speedBoost == True :
+                self.rect.centery += (SHIPSPEED + SPEEDBOOST)
+            else :    
+                self.rect.centery += SHIPSPEED
 
     def get_pos(self):
         return self.rect.center
@@ -380,6 +415,54 @@ class MultiShotPowerUp(pygame.sprite.Sprite):
         (self.dx, self.dy) = speed
         # Allows it to move
         self.toggle = True
+        # Set what type of powerUp it is
+        self.powerUpType = "multiShot"
+
+    def update(self):
+        if self.toggle:
+            # Move it each time update runs. Ex. If CLOCK_TICK = 30,
+            # the update runs 30x per second(30FPS)
+            self.rect.center = (self.rect.centerx + self.dx, self.rect.centery + self.dy)
+            if self.rect.left < 0:
+                self.dx = abs(self.dx)
+            if self.rect.right > WIDTH :
+                self.dx = -1 * abs(self.dx)
+            if self.rect.top < 0:
+                self.dy = abs(self.dy)
+            # Remove sprite when it's off-screen to save memory
+            if self.rect.top > HEIGHT:
+                self.reset()
+        else: 
+            self.rect.centerx += 0
+            self.rect.centery += 0
+
+    def get_pos(self):
+        return self.rect.center 
+
+    def reset(self):
+        self.kill()
+
+class SpeedPowerUp(pygame.sprite.Sprite):
+    def __init__(self, position, speed):
+        pygame.sprite.Sprite.__init__(self)
+        # Get image of the whole spritesheet
+        self.imgMaster = pygame.image.load("assets\sprites\powerUpSpriteSheet.png")
+        self.imgMaster.convert()
+        misImgSize = (131, 125)
+        # Create a surface to draw a section of the spritesheet
+        self.image = pygame.Surface(misImgSize)
+        self.image.blit(self.imgMaster, (0,0), ( (0, 37),(misImgSize)) )
+        self.image.set_colorkey( self.image.get_at((1,1)))
+        self.image = pygame.transform.scale( self.image, (40, 40) ) 
+        # Get rect of sprite
+        self.rect = self.image.get_rect()
+        # Place missile off-screen at first
+        self.rect.center = position
+        (self.dx, self.dy) = speed
+        # Allows it to move
+        self.toggle = True
+        # Set what type of powerUp it is
+        self.powerUpType = "speedBoost"
 
     def update(self):
         if self.toggle:
@@ -520,6 +603,15 @@ def game():
             speedY = randint(3, 5)
             multiShotPowerUp = MultiShotPowerUp((positionX, positionY), (speedX, speedY))
             powerUpGroup.add(multiShotPowerUp)
+
+        if powerUpChance == 1 and pause == False :
+            positionX = randint( 0, WIDTH)
+            positionY = randint( 0, 50 )
+            speedX = randint(3, 5)
+            speedY = randint(3, 5)
+            speedPowerUp = SpeedPowerUp((positionX, positionY), (speedX, speedY))
+            powerUpGroup.add(speedPowerUp)
+
         # Create New list of enemy for each level
         if len(enemyGroup) == 0 and len(bossGroup) == 0:
             level += 1
@@ -658,14 +750,39 @@ def game():
             if pygame.sprite.spritecollide(missile, enemyGroup, False) :
                 explodeSound.play()
                 resetMisList.append(missile)
-        for eachPowerUp in powerUpGroup:        
+                
+        for eachPowerUp in powerUpGroup: 
             if pygame.sprite.spritecollide(eachPowerUp, playerGroup, False) :
-                # Player hits a power up, allow it to shoot multiple missiles
-                # Set the multishot timer to 0 if the player gets a power up while already
-                # powered up
-                player.multiShot = True
-                player.multiShotTimer = 0
-                eachPowerUp.reset()
+                if eachPowerUp.powerUpType == "multiShot" :
+                    # Player hits a power up, allow it to shoot multiple missiles
+                    # Set the multishot timer to 0 if the player gets a power up while already
+                    # powered up
+                    player.multiShot = True
+                    player.multiShotTimer = 0
+                    eachPowerUp.reset()
+
+                elif eachPowerUp.powerUpType == "speedBoost" :
+                    # Player hits this power up, get speed boost
+                    # Set the multishot timer to 0 if the player gets a power up while already
+                    # powered up
+                    player.speedBoost = True
+                    player.speedBoostTimer = 0
+                    eachPowerUp.reset()
+        # for eachPowerUp in powerUpGroup: 
+        #     if pygame.sprite.spritecollide(eachPowerUp, playerGroup, False) :
+        #         if type(eachPowerUp) == MultiShotPowerUp :
+        #             # Player hits a power up, allow it to shoot multiple missiles
+        #             # Set the multishot timer to 0 if the player gets a power up while already
+        #             # powered up
+        #             player.multiShot = True
+        #             player.multiShotTimer = 0
+        #             eachPowerUp.reset()
+
+        #         elif type(eachPowerUp) == SpeedPowerUp :
+        #             player.speedBoost = True
+        #             player.speedBoostTimer = 0
+        #             eachPowerUp.reset()
+
         # Then remove enemy from group
         # If enemy was removed too soon. The the loop above wouldn't detech any collisions
         for eachEnemy in deadEnemy:   
