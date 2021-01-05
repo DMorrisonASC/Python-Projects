@@ -81,20 +81,19 @@ class Player(pygame.sprite.Sprite):
             if self.frame >= len(self.imgList):
                 self.frame = 0            
             self.image = self.imgList[self.frame]
-        # If the player collides with a power, set a timer.
+        # If the player collides with a power, set a timer that only counts up when game is unpaused.
         # When timer reaches a __ seconds, turn it off
-        if self.multiShot == True:
+        if self.multiShot and self.toggle == True :
             self.multiShotTimer += 1
             if self.multiShotTimer > CLOCK_TICK * 5:
                 self.multiShotTimer = 0
                 self.multiShot = False
 
-        if self.speedBoost == True:
+        if self.speedBoost and self.toggle == True:
             self.speedBoostTimer += 1
             if self.speedBoostTimer > CLOCK_TICK * 5:
                 self.speedBoostTimer = 0
                 self.speedBoost = False
-                print(self.speedBoost)
 
         # Allow the user to move using the arrow keys or awsd keys.
         # pygame.key.get_pressed() returns a
@@ -102,44 +101,23 @@ class Player(pygame.sprite.Sprite):
         # More than one key can be pressed.
         keys = pygame.key.get_pressed()     
         # Arrow keys
-        if keys[pygame.K_RIGHT] and self.rect.right < WIDTH and self.toggle == True: 
+        if (keys[pygame.K_RIGHT] or keys[pygame.K_d] ) and self.rect.right < WIDTH and self.toggle == True: 
             # If player collect speed boost(powerUp), increase their speed by ___
             if self.speedBoost == True :
                 self.rect.centerx += (SHIPSPEED + SPEEDBOOST)
             else : 
                 self.rect.centerx += SHIPSPEED         
-        if keys[pygame.K_LEFT] and self.rect.left > 0 and self.toggle == True: 
+        if (keys[pygame.K_LEFT] or keys[pygame.K_a]) and self.rect.left > 0 and self.toggle == True: 
             if self.speedBoost == True :
                 self.rect.centerx -= (SHIPSPEED + SPEEDBOOST)        
             else :
                 self.rect.centerx -= SHIPSPEED      
-        if keys[pygame.K_UP] and self.rect.top > 0 and self.toggle == True:   
+        if (keys[pygame.K_UP] or keys[pygame.K_w])and self.rect.top > 0 and self.toggle == True:   
             if self.speedBoost == True :
                 self.rect.centery -= (SHIPSPEED + SPEEDBOOST) 
             else :  
                 self.rect.centery -= SHIPSPEED      
-        if keys[pygame.K_DOWN] and self.rect.bottom < HEIGHT and self.toggle == True:
-            if self.speedBoost == True :
-                self.rect.centery += (SHIPSPEED + SPEEDBOOST)
-            else :    
-                self.rect.centery += SHIPSPEED
-        # AWSD keys
-        if keys[pygame.K_d] and self.rect.right < WIDTH and self.toggle == True:            
-            if self.speedBoost == True :
-                self.rect.centerx += (SHIPSPEED + SPEEDBOOST)
-            else : 
-                self.rect.centerx += SHIPSPEED          
-        if keys[pygame.K_a] and self.rect.left > 0 and self.toggle == True:         
-            if self.speedBoost == True :
-                self.rect.centerx -= (SHIPSPEED + SPEEDBOOST)        
-            else :
-                self.rect.centerx -= SHIPSPEED   
-        if keys[pygame.K_w] and self.rect.top > 0 and self.toggle == True:             
-            if self.speedBoost == True :
-                self.rect.centery -= (SHIPSPEED + SPEEDBOOST) 
-            else :  
-                self.rect.centery -= SHIPSPEED      
-        if keys[pygame.K_s] and self.rect.bottom < HEIGHT and self.toggle == True:
+        if (keys[pygame.K_DOWN] or keys[pygame.K_s]) and self.rect.bottom < HEIGHT and self.toggle == True:
             if self.speedBoost == True :
                 self.rect.centery += (SHIPSPEED + SPEEDBOOST)
             else :    
@@ -183,7 +161,7 @@ class Missile(pygame.sprite.Sprite):
     def fireLeft(self, player_pos):
             self.rect.center = player_pos
             # Rotate it to make it look like it's going to the left
-            self.image = pygame.transform.rotate(self.image, 25)
+            self.image = pygame.transform.rotate(self.image, 15)
             self.dy = -BOMB_SpeedY 
             self.dx = -BOMB_SpeedX
 
@@ -345,14 +323,14 @@ class EnemyMissile(pygame.sprite.Sprite):
     def fireRight(self, enemy_pos):
             self.rect.center = enemy_pos
             # Rotate it to make it look like it's going to the right
-            self.image = pygame.transform.rotate(self.image, 45)
+            self.image = pygame.transform.rotate(self.image, 15)
             self.dy = 10 
             self.dx = 5
 
     def fireLeft(self, enemy_pos):
             self.rect.center = enemy_pos
             # Rotate it to make it look like it's going to the left
-            self.image = pygame.transform.rotate(self.image, 315)
+            self.image = pygame.transform.rotate(self.image, 345)
             self.dy = 10 
             self.dx = -5
 
@@ -617,7 +595,7 @@ def game():
             level += 1
             levelLabel.text = f"Level: {level}"
             # Every 15 lvls, spawn 2 bosses
-            if level % 15 == 0:
+            if level % 2 == 0:
                 for i in range(2):
                     positionX = randint( 0, WIDTH)
                     positionY = randint( 20, 50 )
@@ -720,7 +698,6 @@ def game():
                 deadEnemy.append(eachEnemy)
 
         for eachBoss in bossGroup: 
-            # print(tickCounts)
             if eachBoss.shoot_delay == 30 and eachEnemy.toggle == True:
                 enemyMissile = EnemyMissile()
                 enemyMissileGroup.add(enemyMissile)
@@ -750,7 +727,7 @@ def game():
             if pygame.sprite.spritecollide(missile, enemyGroup, False) :
                 explodeSound.play()
                 resetMisList.append(missile)
-                
+
         for eachPowerUp in powerUpGroup: 
             if pygame.sprite.spritecollide(eachPowerUp, playerGroup, False) :
                 if eachPowerUp.powerUpType == "multiShot" :
