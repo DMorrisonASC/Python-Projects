@@ -595,7 +595,7 @@ def game():
             level += 1
             levelLabel.text = f"Level: {level}"
             # Every 15 lvls, spawn 2 bosses
-            if level % 2 == 0:
+            if level % 15 == 0:
                 for i in range(2):
                     positionX = randint( 0, WIDTH)
                     positionY = randint( 20, 50 )
@@ -675,8 +675,6 @@ def game():
                     pause = True
                 elif event.key == pygame.K_p and pause == True:
                     pause = False
-                if event.key == pygame.K_q:
-                    sys.exit()  
         #### Check collisions or any other actions
         # Make a list of enemies, adding them into it when they collide with a missile
         deadEnemy = []
@@ -745,21 +743,6 @@ def game():
                     player.speedBoost = True
                     player.speedBoostTimer = 0
                     eachPowerUp.reset()
-        # for eachPowerUp in powerUpGroup: 
-        #     if pygame.sprite.spritecollide(eachPowerUp, playerGroup, False) :
-        #         if type(eachPowerUp) == MultiShotPowerUp :
-        #             # Player hits a power up, allow it to shoot multiple missiles
-        #             # Set the multishot timer to 0 if the player gets a power up while already
-        #             # powered up
-        #             player.multiShot = True
-        #             player.multiShotTimer = 0
-        #             eachPowerUp.reset()
-
-        #         elif type(eachPowerUp) == SpeedPowerUp :
-        #             player.speedBoost = True
-        #             player.speedBoostTimer = 0
-        #             eachPowerUp.reset()
-
         # Then remove enemy from group
         # If enemy was removed too soon. The the loop above wouldn't detech any collisions
         for eachEnemy in deadEnemy:   
